@@ -195,6 +195,8 @@ echo "✅ TravelMemory frontend is deployed at: frontend.mytravelapp.xyz"
 ## 🧱 **Deployment Architecture Diagram**
 
 > **TravelMemory AWS Architecture**
+> ![image](https://github.com/user-attachments/assets/b0f494f3-89ff-4e31-aec1-40718960529a)
+
 
 ### ⚙️ **Backend Deployment Flow (AWS)**
 
