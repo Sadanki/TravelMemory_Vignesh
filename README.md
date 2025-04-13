@@ -255,5 +255,3 @@ This project is open-source and available for educational, practice, and real-wo
 We appreciate your interest in the **TravelMemory** project.
 
 ---
-
-This updated README now includes your specific repository names, API URLs, and other setup details. It should work well for your TravelMemory deployment. Let me know if you need any further adjustments!
