@@ -235,6 +235,12 @@ echo "✅ TravelMemory frontend is deployed at: frontend.mytravelapp.xyz"
 
 3. **Application Running → frontend.mytravelapp.xyz**
    - Frontend Live
+OutPut:
+![image](https://github.com/user-attachments/assets/f4ce83ab-be20-4441-a153-d5ad822ccf57)
+
+Json
+![image](https://github.com/user-attachments/assets/392045ad-eaca-4089-8f84-a47c0eef4ec1)
+
 
 ---
 
