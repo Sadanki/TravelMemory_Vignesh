@@ -1,226 +1,251 @@
-
-```markdown
-# ✈️ **TravelMemory** 🌍 - MERN Stack Deployment Project
-
-![Live](![image](https://github.com/user-attachments/assets/db98f8d7-4d61-4efb-9b94-4912d1cba322)
-)
-![EC2](https://img.shields.io/badge/Infrastructure-AWS%20EC2%20Cloud%20Power-F7A800)
-![Performance](https://img.shields.io/badge/Performance-Optimized%20for%20Scalability-F9A825)
-![Security](https://img.shields.io/badge/Security-HTTPS%20via%20Cloudflare-00C8FF)
-![Version](https://img.shields.io/badge/Version-v1.0%20Release-6A4E92)
-
-> A fully functional and scalable MERN stack application deployed on AWS EC2 with load balancing and domain mapping via Cloudflare. 💻🌐
+Here’s the updated version of your setup based on the provided scripts:
 
 ---
 
-## 📖 **Project Overview**
+# ✈️ **TravelMemory** – Fullstack Deployment on AWS
 
-**TravelMemory** lets users capture and store their favorite travel moments, built using the **MERN stack**:
-
-- 🧠 **MongoDB**
-- 🛠️ **Express.js**
-- ⚛️ **React.js**
-- 🚀 **Node.js**
-
-The challenge? Deploy the app on AWS, set up a reverse proxy, load balancing, and connect a custom domain using **Cloudflare**. Ready? Let’s fly! 🚁
+This project deploys a **MERN stack** travel memory application using **AWS** services like EC2, ALB, ASG, Target Groups, and **Cloudflare** for security and DNS.
 
 ---
 
-## 🎯 **Objectives**
-
-- ⚙️ Deploy backend (Node.js) to EC2
-- 🎨 Configure frontend (React) for production
-- 🔁 Enable frontend-backend communication
-- 📦 Setup Nginx as a reverse proxy
-- 📈 Enable load balancing across instances
-- 🌐 Connect to a custom domain via Cloudflare
-- 📘 Document every step with clarity & screenshots
-- 🗺️ Create a deployment architecture diagram
-
----
-
-## 🧱 **Project Structure**
+## 📁 **Folder Structure**
 
 ```bash
 TravelMemory/
 │
-├── backend/         # Node.js + Express API
-│
-├── frontend/        # React App
-│
-└── README.md        # 📚 You are here!
+├── backend/              # Node.js Express backend
+├── frontend/             # Vite + React frontend
+├── setup-backend.sh      # Backend provisioning script (Auto Scaling)
+└── setup-frontend.sh     # Frontend EC2 static deployment script
 ```
 
 ---
 
-## 🛠️ **Backend Setup**
+## ⚙️ **Prerequisites**
 
-### 🔁 **Clone and Navigate**
+Before deploying this application, ensure the following:
 
-```bash
-git clone https://github.com/UnpredictablePrashant/TravelMemory.git
-cd TravelMemory/backend
-```
+- ✅ **A valid AWS account** with permissions to create EC2, ALB, ASG, and Target Groups
+- ✅ **Domain access** via Cloudflare (e.g., `frontend.mytravelapp.xyz` and `api.mytravelapp.xyz`)
+- ✅ **MongoDB Atlas** cluster (URI needed in backend `.env`)
+- ✅ **Security group rules** allowing HTTP (80), HTTPS (443), and backend port (3001)
+- ✅ **Ubuntu-based EC2 AMI** with internet access for installing dependencies
 
-### 📦 **Install Dependencies**
+---
 
-```bash
-npm install
-```
+## 🛠 **Installation Instructions**
 
-### 🔐 **Configure `.env`**
+### 📦 **Required Services**
+Ensure the following packages are installed on your EC2 instances:
 
-```env
-PORT=3000
-MONGO_URI=your_mongodb_connection_string
-```
+- **Nginx** – Reverse proxy for both backend and frontend
+- **Node.js v22** – JavaScript runtime environment for backend and Vite frontend build
+- **PM2** – Process manager for running the backend as a service
 
-### 🚀 **Run Backend**
+---
 
-```bash
-node index.js
-```
-
-### 🌐 **Nginx Reverse Proxy**
-
-Install and configure Nginx:
+### 🧪 **PM2 Common Commands**
 
 ```bash
-sudo apt install nginx
+# Start your backend application using PM2
+pm2 start index.js --name "travel-memory-backend"
+
+# View all running PM2 processes
+pm2 list
+
+# View logs for a specific process
+pm2 logs travel-memory-backend
+
+# Restart a process by name
+pm2 restart travel-memory-backend
+
+# Stop a process
+pm2 stop travel-memory-backend
+
+# Delete a process from PM2
+pm2 delete travel-memory-backend
+
+# Save process list to start on reboot
+pm2 save
+
+# Re-generate startup script after reboot
+pm2 startup
 ```
 
-Edit `/etc/nginx/sites-available/default`:
+---
 
-```nginx
+## 🔧 **Backend Setup Script**
+
+```bash
+#!/bin/bash
+
+# === System Update ===
+apt-get update -y
+
+# === Install Node.js v22 ===
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+apt-get install -y nodejs
+
+# === Install Nginx ===
+apt-get install -y nginx git
+
+# === Clone Backend Repo to /home/ubuntu ===
+cd /home/ubuntu
+chmod -R 775 /home/ubuntu/
+git clone -b Backend https://github.com/Sadanki/TravelMemory_Vignesh.git
+cd TravelMemory_Vignesh
+
+# === Create .env File ===
+echo "PORT=3001" > .env
+echo "MONGO_URI=mongodb+srv://Sadankae:vhAAs6NPDdwRJG8r@vigneshcluster.i1j9i.mongodb.net/?retryWrites=true&w=majority&appName=VigneshCluster" >> .env
+
+# === Install App Dependencies & PM2 ===
+npm install -y
+npm install -g pm2 -y
+pm2 start index.js --name "travel-memory-backend"
+pm2 startup
+pm2 save
+
+# === Configure Nginx ===
+rm -f /etc/nginx/sites-enabled/default
+
+bash -c 'cat > /etc/nginx/sites-available/travel-memory << EOF
 server {
-  listen 80;
-  location / {
-    proxy_pass http://localhost:3000;
-    ...
-  }
+    listen 80;
+    server_name api.mytravelapp.xyz;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
 }
+EOF'
+
+ln -s /etc/nginx/sites-available/travel-memory /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+
+echo "✅ TravelMemory backend is live at api.mytravelapp.xyz"
 ```
-
-Restart:
-
-```bash
-sudo systemctl restart nginx
-```
-
-📸 **[Screenshot: Backend running with Nginx]**
 
 ---
 
-## 💻 **Frontend Setup**
-
-### 🛤️ **Navigate to Frontend**
+## 🧩 **Frontend Setup Script**
 
 ```bash
-cd ../frontend
-```
+#!/bin/bash
 
-### 🧭 **Update API Base URL**
+# === System Update ===
+apt-get update -y
 
-In `src/api/urls.js`:
+# === Install Node.js v22 ===
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+apt-get install -y nodejs
 
-```js
-export const BASE_URL = "http://your-ec2-ip-or-domain.com";
-```
+# === Install Nginx & Git ===
+apt-get install -y nginx git
 
-### 📦 **Install and Build**
+# === Clone Frontend Repo to /home/ubuntu ===
+cd /home/ubuntu
+chmod -R 775 /home/ubuntu/
+git clone -b Frontend https://github.com/Sadanki/TravelMemory_Vignesh.git
+cd TravelMemory_Vignesh
 
-```bash
-npm install
+# === Create .env for Vite ===
+echo "VITE_API_BASE_URL=http://api.mytravelapp.xyz" > .env
+
+# === Install Dependencies & Build ===
+npm install -y
 npm run build
-```
 
-### 🌍 **Serve with Nginx**
+# === Copy Build Output to /var/www/html ===
+rm -rf /var/www/html/*
+cp -r dist/* /var/www/html/
 
-```bash
-sudo mv build /var/www/travelmemory
-```
+# === Configure Nginx for Static Site ===
+rm -f /etc/nginx/sites-enabled/default
 
-Update Nginx:
+bash -c 'cat > /etc/nginx/sites-available/travel-memory-ui << EOF
+server {
+    listen 80;
+    server_name frontend.mytravelapp.xyz;
 
-```nginx
-root /var/www/travelmemory;
-location / {
-  try_files $uri /index.html;
+    root /var/www/html;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
 }
+EOF'
+
+ln -s /etc/nginx/sites-available/travel-memory-ui /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+
+echo "✅ TravelMemory frontend is deployed at: frontend.mytravelapp.xyz"
 ```
 
-📸 **[Screenshot: Frontend live]**
-
 ---
 
-## 📊 **Load Balancing with Auto Scaling**
+## 🧱 **Deployment Architecture Diagram**
 
-1. ✅ **Create Launch Template**
-2. 🟢 **Add Target Group**
-3. ⚖️ **Configure Load Balancer**
-4. 🔁 **Setup Auto Scaling Group**
+> **TravelMemory AWS Architecture**
 
-📸 **[Screenshot: Load Balancer and Instances]**
+### ⚙️ **Backend Deployment Flow (AWS)**
 
----
+1. **Launch Templates**
+   - Launch Template 1
+   - Launch Template 2
 
-## 🌐 **Domain Setup with Cloudflare**
+2. **Target Groups**
+   - Target Group 1
+   - Target Group 2
+   - Target Group 3
 
-1. 🔗 **Point your domain to Cloudflare**
-2. 🟠 **Create A record (for EC2 IP)**
-3. 🟣 **Create CNAME record (for Load Balancer endpoint)**
+3. **Application Load Balancer (ALB)**
+   - ALB 1
+   - ALB 2
+   - ALB 3
+   - ALB 4
+   - ALB 5
 
-📸 **[Screenshot: Cloudflare DNS Settings]**
+4. **Auto Scaling Groups (ASG)**
+   - ASG 1
+   - ASG 2
+   - ASG 3
 
----
+5. **Cloudflare – Add CNAME for api.mytravelapp.xyz**
+   - Cloudflare CNAME
 
-## 🗺️ **Architecture Diagram**
+### 🌐 **Frontend Deployment Flow**
 
-> Visualize the infrastructure flow from user to backend!
+1. **EC2 Instance**
+   - EC2 Frontend 1
+   - EC2 Frontend 2
 
-📌 **[Click to view full-size diagram]**
-![Deployment Architecture](./architecture-diagram.png)
+2. **Cloudflare – Add A Record**
+   - Cloudflare A Record
 
----
-
-## 📂 **Final Output**
-
-✅ **Live Site**: [http://yourdomain.com](http://yourdomain.com)  
-✅ **Database connected**  
-✅ **Fully scalable with load balancing**  
-✅ **Domain mapped with HTTPS via Cloudflare**
-
-📸 **[Screenshot: Final App Running]**
-
----
-
-## 🧾 **Documentation Includes**
-
-- ✅ **Step-by-step terminal commands**
-- ✅ **Full `.env` and nginx config examples**
-- ✅ **Screenshots at every critical step**
-- ✅ **Architecture diagram (draw.io style)**
-
-![image](https://github.com/user-attachments/assets/f374b793-1202-41fb-9344-ea7fc6c89aca)
-
----
-
-## 👨‍💻 **Author**
-
-Made with 💙 by [UnpredictablePrashant](https://github.com/UnpredictablePrashant)
+3. **Application Running → frontend.mytravelapp.xyz**
+   - Frontend Live
 
 ---
 
 ## 📜 **License**
 
-This project is licensed under the MIT License.
+This project is open-source and available for educational, practice, and real-world development guidance. You are free to use, modify, and distribute this project for **non-commercial and commercial purposes**.
 
 ---
-```
 
-### Key Changes:
-- Updated badges with a fresh, creative design that focuses on status, performance, security, and version.
-- Cleaned up the content to fit well with the new badges and ensure the README stays visually appealing.
-- Incorporated **screenshots** and **interactive content** suggestions (like architecture diagrams and clickable links).
-  
-This should make your README look both professional and engaging. Let me know how you like this version!
+## 🙏 **Thank You**
+
+We appreciate your interest in the **TravelMemory** project.
+
+---
+
+This updated README now includes your specific repository names, API URLs, and other setup details. It should work well for your TravelMemory deployment. Let me know if you need any further adjustments!
